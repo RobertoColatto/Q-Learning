@@ -1,3 +1,56 @@
+import numpy as np
+import random
+
+game = [[' ', ' ', ' '],
+        [' ', ' ', ' '],
+        [' ', ' ', ' ']]
+
+Q = {}
+
+
+def flatten_list(matrix: list[list[str]]):
+    flat_list = []
+    for row in matrix:
+        flat_list.extend(row)
+    return flat_list
+
+learning_rate = 0.1
+discount_factor = 0.9
+exploration_rate = 0.1
+
+
+def board_to_string(board: np.ndarray):
+    return ''.join(board.flatten())
+          
+def choose_action(board, exploration_rate):
+    true_board = np.asarray(board, dtype=np.int32)
+    state = board_to_string(board)
+    
+    if random.uniform(0,1) < exploration_rate or state not in Q:
+        empty_cells = np.argwhere(true_board == ' ')
+        action = tuple(random.choice(empty_cells))
+    else:
+        q_values = Q[state]
+        empty_cells = np.argwhere(true_board == ' ')
+        empty_q_values = [q_values[cell[0],cell[1]] for cell in empty_cells]
+        max_q_value = max(empty_q_values)
+        max_q_indices = [i for i in range(len(empty_cells)) if empty_q_values == max_q_value]
+        max_q_index = random.choice(max_q_indices)
+        action = tuple(empty_cells[max_q_index])
+    return action
+
+def update_q_table(state, action, next_state, reward):
+    q_values = Q.get(state, np.zeros((3,3)))
+
+    next_q_values = Q.get(board_to_string(next_state), np.zeros((3,3)))
+    max_next_q_value = np.max(next_q_values)
+
+    q_values[action[0], action[1]] += learning_rate * (reward + discount_factor * max_next_q_value - q_values[action[0], action[1]])
+
+    Q[state] = q_values
+
+
+
 def check_row(game, symbol):
     flag = False
     for i in range(3):
@@ -95,8 +148,5 @@ def tic_tac_toe(game):
     print("O jogo empatou.")
     return
 
-game = [[' ', ' ', ' '],
-        [' ', ' ', ' '],
-        [' ', ' ', ' ']]
 
 tic_tac_toe(game)
