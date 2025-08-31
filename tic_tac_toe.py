@@ -1,9 +1,9 @@
 import numpy as np
 import random
 
-game = [[' ', ' ', ' '],
-        [' ', ' ', ' '],
-        [' ', ' ', ' ']]
+board = [[' ', ' ', ' '],
+         [' ', ' ', ' '],
+         [' ', ' ', ' ']]
 
 Q = {}
 
@@ -23,15 +23,13 @@ def board_to_string(board: np.ndarray):
     return ''.join(board.flatten())
           
 def choose_action(board, exploration_rate):
-    true_board = np.asarray(board, dtype=np.int32)
     state = board_to_string(board)
+    empty_cells = np.argwhere(board == ' ')
     
     if random.uniform(0,1) < exploration_rate or state not in Q:
-        empty_cells = np.argwhere(true_board == ' ')
         action = tuple(random.choice(empty_cells))
     else:
         q_values = Q[state]
-        empty_cells = np.argwhere(true_board == ' ')
         empty_q_values = [q_values[cell[0],cell[1]] for cell in empty_cells]
         max_q_value = max(empty_q_values)
         max_q_indices = [i for i in range(len(empty_cells)) if empty_q_values == max_q_value]
@@ -42,7 +40,7 @@ def choose_action(board, exploration_rate):
 def update_q_table(state, action, next_state, reward):
     q_values = Q.get(state, np.zeros((3,3)))
 
-    next_q_values = Q.get(board_to_string(next_state), np.zeros((3,3)))
+    next_q_values = Q.get(next_state, np.zeros((3,3)))
     max_next_q_value = np.max(next_q_values)
 
     q_values[action[0], action[1]] += learning_rate * (reward + discount_factor * max_next_q_value - q_values[action[0], action[1]])
@@ -51,50 +49,50 @@ def update_q_table(state, action, next_state, reward):
 
 
 
-def check_row(game, symbol):
+def check_row(board, symbol):
     flag = False
     for i in range(3):
-        if game[i][0] == symbol and game[i][1] == symbol and game[i][2] == symbol:
+        if board[i][0] == symbol and board[i][1] == symbol and board[i][2] == symbol:
             flag = True
     return flag
 
-def check_column(game, symbol):
+def check_column(board, symbol):
     flag = False
     for i in range(3):
-        if game[0][i] == symbol and game[1][i] == symbol and game[2][i] == symbol:
+        if board[0][i] == symbol and board[1][i] == symbol and board[2][i] == symbol:
             flag = True
     return flag
 
-def check_decreasing_diagonal(game, symbol):
+def check_decreasing_diagonal(board, symbol):
     flag = 0
     for i in range(3):
-        if game[i][i] == symbol:
+        if board[i][i] == symbol:
             flag += 1
     if flag == 3:
         return True
     else:
         return False
     
-def check_increasing_diagonal(game, symbol):
+def check_increasing_diagonal(board, symbol):
     flag = 0
     for i in range(3):
-        if game[i][2 - i] == symbol:
+        if board[i][2 - i] == symbol:
             flag += 1
     if flag == 3:
         return True
     else:
         return False
 
-def check_victory(game, symbol):
-    return check_row(game, symbol) or check_column(game, symbol) or check_decreasing_diagonal(game, symbol) or check_increasing_diagonal(game, symbol)
+def check_victory(board, symbol):
+    return check_row(board, symbol) or check_column(board, symbol) or check_decreasing_diagonal(board, symbol) or check_increasing_diagonal(board, symbol)
 
-def remaining_positions(game, symbol):
+def remaining_positions(board, symbol):
     n = 0
     positions = {}
     print("Posicoes restantes:")
     for i in range(3):
         for j in range(3):
-            if game[i][j] == ' ':
+            if board[i][j] == ' ':
                 n += 1
                 print(f"{n} - ({i + 1}, {j + 1})")
                 positions[n] = [i, j]
@@ -103,50 +101,95 @@ def remaining_positions(game, symbol):
         op = int(input("Escolha uma posicao para jogar: "))
         if op in positions:
             i, j = positions[op]
-            game[i][j] = symbol
+            board[i][j] = symbol
             flag = True
         else:
             print("Opcao invalida. Tente novamente")
 
-def print_game(game):
-    for i in game:
+def print_board(board):
+    for i in board:
         print(i)
 
 def choose_players():
+    you_plays_first = True
+    
+    while True:
+        print("1 - Voce")
+        print("2 - Maquina")
+        op1 = int(input("Escolha quem devera jogar primeiro: "))
+        if op1 == 1:
+            print("Você jogara primeiro.")
+            you_plays_first = True
+            break
+        elif op1 == 2:
+            print("A maquina jogara primeiro.")
+            you_plays_first = False
+            break
+        else:
+            print("Opção invalida. Tente novamente.")
+    
     print("1 - O")
     print("2 - X")
     while True:
-        op = int(input("Escolha o simbolo que jogara primeiro: "))
-        if op == 1:
-            print("O (O) jogara primeiro.")
-            return 'O', 'X'
-        elif op == 2:
-            print("O (X) jogara primeiro.")
-            return 'X', 'O'
+        op2 = int(input("Escolha o simbolo como o qual deseja jogar: "))
+        if op2 == 1:
+            print("Você jogara como (O).")
+            return you_plays_first, 'O', 'X'
+        elif op2 == 2:
+            print("Você jogara como (X).")
+            return you_plays_first, 'X', 'O'
         else:
-            print("Opcao invalida. Tente novamente.")
+            print("Opção inválida. Tente novamente.")
 
-def tic_tac_toe(game):
-    player1, player2 = choose_players()
+def tic_tac_toe(board):
+    you_play_first, player, opponent = choose_players()
+    state = board_to_string(np.array(board))
+
+    if you_play_first == True:
+        n = 0
+    else:
+        n = 1
+
     for i in range(9):
-        print_game(game)
-        if i % 2 == 0:
-            print(f"Vez do jogador 1 ({player1}):")
-            remaining_positions(game, player1)
-            if check_victory(game, player1):
-                print_game(game)
-                print(f"O jogador 1 ({player1}) venceu.")
+        print_board(board)
+
+        if i % 2 == n:
+            # Jogador humano
+            print(f"Sua vez:")
+            remaining_positions(board, player)
+            next_state = board_to_string(np.array(board))
+            if check_victory(board, player):
+                print_board(board)
+                print(f"Voce venceu.")
+                # Atualiza Q da máquina (derrota)
+                update_q_table(state, action, next_state, -1)
                 return
+            
         else:
-            print(f"Vez do jogador 2 ({player2}):")
-            remaining_positions(game, player2)
-            if check_victory(game, player2):
-                print_game(game)
-                print(f"O jogador 2 ({player2}) venceu.")
+            # Jogador máquina (Q-learning)
+            print(f"Vez da maquina:")
+            board_np = np.array(board)
+            action = choose_action(board_np, exploration_rate)
+            board[action[0]][action[1]] = opponent
+            next_state = board_to_string(np.array(board))
+
+            if check_victory(board, opponent):
+                print_board(board)
+                print(f"A maquina venceu.")
+                # Atualiza Q da máquina (vitória)
+                update_q_table(state, action, next_state, +1)
                 return
-    print_game(game)
+            else:
+                # Movimento normal sem recompensa
+                update_q_table(state, action, next_state, 0)
+
+        state = next_state
+
+    print_board(board)
     print("O jogo empatou.")
+    # Empate: recompensa menor
+    update_q_table(state, action, state, 0.5)
     return
 
 
-tic_tac_toe(game)
+tic_tac_toe(board)
