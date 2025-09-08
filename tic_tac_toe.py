@@ -15,7 +15,7 @@ def flatten_list(matrix: list[list[str]]):
         flat_list.extend(row)
     return flat_list
 
-learning_rate = 0.001
+learning_rate = 0.1
 discount_factor = 0.9
 exploration_rate = 0.5
 
@@ -248,6 +248,9 @@ class Application:
 
     def simulate_bot_vs_bot(self,num_games=1000):
         exploration_rate = 0.5
+
+        wins_X, wins_O, draws = 0, 0, 0
+
         for game in range(num_games):
             board = [[' ']*3 for _ in range(3)]
             state = board_to_string(board)
@@ -281,9 +284,11 @@ class Application:
                     if current_symbol == 'X':
                         update_q_table(last_state_X, last_action_X, state, reward=+1.0)
                         update_q_table(last_state_O, last_action_O, state, reward=-1.0)
+                        wins_X += 1
                     else:
                         update_q_table(last_state_O, last_action_O, state, reward=+1.0)
                         update_q_table(last_state_X, last_action_X, state, reward=-1.0)
+                        wins_O += 1
                     break
 
                 if is_draw(board):
@@ -291,18 +296,24 @@ class Application:
                     update_q_table(last_state_X, last_action_X, state, reward=0.5)
                     #if last_state_O is not None:
                     update_q_table(last_state_O, last_action_O, state, reward=0.5)
+                    draws += 1
                     break
-                exploration_rate *= 0.99
+                #exploration_rate *= 0.99
                 
                 
                 current_symbol = 'O' if current_symbol == 'X' else 'X'
+
+            exploration_rate *= 0.99
+
+        return wins_X, wins_O, draws
+    
     def run_bot_training(self):
         try:
             n = int(self.train_games_entry.get())
         except ValueError:
             n = 1000
-        self.simulate_bot_vs_bot(n)
-        Label(self.menu_frame, text=f"Treino concluído ({n} jogos).", fg="green").pack()
+        wins_X, wins_O, draws = self.simulate_bot_vs_bot(n)
+        Label(self.menu_frame, text=f"Treino concluído ({n} jogos)\nX venceu: {wins_X}\nO venceu: {wins_O}\nEmpates: {draws}", fg="green").pack()
 
 
         
