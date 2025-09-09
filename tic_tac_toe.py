@@ -15,15 +15,16 @@ def flatten_list(matrix: list[list[str]]):
         flat_list.extend(row)
     return flat_list
 
-learning_rate = 0.1
+learning_rate = 0.001
 discount_factor = 0.9
-exploration_rate = 0.1
+exploration_rate = 0.5
 
 def board_to_string(board_matrix):
     arr = np.array(board_matrix)
     return ''.join(arr.flatten())
           
 def choose_action(board, exploration_rate):
+    print(exploration_rate)
     state = board_to_string(board)
     empty_cells = np.argwhere(board == ' ')
     
@@ -125,6 +126,14 @@ class Application:
         symbol_box.pack(fill="x", pady=6)
         Radiobutton(symbol_box, text="X", variable=self.symbol_var, value="X").pack(anchor="w")
         Radiobutton(symbol_box, text="O", variable=self.symbol_var, value="O").pack(anchor="w")
+
+        train_box = LabelFrame(self.menu_frame, text="Treinar Bot vs Bot", padx=10, pady=10)
+        train_box.pack(fill="x", pady=6)
+        Label(train_box, text="Nº de jogos:").pack(side="left")
+        self.train_games_entry = Entry(train_box, width=6)
+        self.train_games_entry.insert(0, "1000")  # default
+        self.train_games_entry.pack(side="left", padx=6)
+        Button(train_box, text="Treinar", command=self.run_bot_training).pack(side="left")
 
         Button(self.menu_frame, text="Iniciar jogo", width=16, command=self.start_game).pack(pady=(10, 4))
 
@@ -236,6 +245,77 @@ class Application:
             return
 
         self.status.config(text="Sua vez.")
+
+    def simulate_bot_vs_bot(self,num_games=1000):
+        exploration_rate = 0.5
+
+        wins_X, wins_O, draws = 0, 0, 0
+
+        for game in range(num_games):
+            board = [[' ']*3 for _ in range(3)]
+            state = board_to_string(board)
+            last_state_X, last_action_X = None, None
+            last_state_O, last_action_O = None, None
+            current_symbol = 'X'
+
+            while True:
+                board_np = np.array(board)
+                action = choose_action(board_np, exploration_rate)
+                i, j = action
+                board[i][j] = current_symbol
+                next_state = board_to_string(board)
+
+                if current_symbol == 'X' and last_state_X is not None:
+                    #pass
+                    update_q_table(last_state_X, last_action_X, next_state, reward=0.0)
+                if current_symbol == 'O' and last_state_O is not None:
+                    #pass
+                    update_q_table(last_state_O, last_action_O, next_state, reward=0.0)
+
+                if current_symbol == 'X':
+                    last_state_X, last_action_X = state, action
+                else:
+                    last_state_O, last_action_O = state, action
+
+                state = next_state
+
+                # check for terminal states
+                if check_victory(board, current_symbol):
+                    if current_symbol == 'X':
+                        update_q_table(last_state_X, last_action_X, state, reward=+1.0)
+                        update_q_table(last_state_O, last_action_O, state, reward=-1.0)
+                        wins_X += 1
+                    else:
+                        update_q_table(last_state_O, last_action_O, state, reward=+1.0)
+                        update_q_table(last_state_X, last_action_X, state, reward=-1.0)
+                        wins_O += 1
+                    break
+
+                if is_draw(board):
+                    #if last_state_X is not None:
+                    update_q_table(last_state_X, last_action_X, state, reward=0.5)
+                    #if last_state_O is not None:
+                    update_q_table(last_state_O, last_action_O, state, reward=0.5)
+                    draws += 1
+                    break
+                
+                
+                current_symbol = 'O' if current_symbol == 'X' else 'X'
+
+            exploration_rate *= 0.99
+
+        return wins_X, wins_O, draws
+    
+    def run_bot_training(self):
+        try:
+            n = int(self.train_games_entry.get())
+        except ValueError:
+            n = 1000
+        wins_X, wins_O, draws = self.simulate_bot_vs_bot(n)
+        Label(self.menu_frame, text=f"Treino concluído ({n} jogos)\nX venceu: {wins_X}\nO venceu: {wins_O}\nEmpates: {draws}", fg="green").pack()
+
+
+        
 
 root = Tk()
 app = Application(root)
