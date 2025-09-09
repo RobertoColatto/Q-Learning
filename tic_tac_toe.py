@@ -15,7 +15,7 @@ def flatten_list(matrix: list[list[str]]):
         flat_list.extend(row)
     return flat_list
 
-learning_rate = 0.1
+learning_rate = 0.001
 discount_factor = 0.9
 exploration_rate = 0.5
 
@@ -298,7 +298,6 @@ class Application:
                     update_q_table(last_state_O, last_action_O, state, reward=0.5)
                     draws += 1
                     break
-                #exploration_rate *= 0.99
                 
                 
                 current_symbol = 'O' if current_symbol == 'X' else 'X'
